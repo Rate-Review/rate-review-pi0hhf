@@ -1,0 +1,125 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Reference the base kustomization
+resources:
+  - ../../base
+
+# Override namespace for staging environment
+namespace: justice-bid-staging
+
+# Add staging prefix to all resources
+namePrefix: staging-
+
+# Add staging-specific labels
+commonLabels:
+  environment: staging
+  tier: pre-production
+
+# Generate ConfigMaps from staging configuration
+configMapGenerator:
+  - name: justice-bid-config
+    files:
+      - config.yaml
+    behavior: merge
+
+# Generate Secrets for staging environment
+secretGenerator:
+  - name: justice-bid-secrets
+    literals:
+      - DATABASE_URL=postgresql://dbuser:${DB_PASSWORD}@jb-staging-postgres.cluster-xxx.us-east-1.rds.amazonaws.com:5432/justicebid
+      - REDIS_URL=redis://jb-staging-redis.xxx.us-east-1.cache.amazonaws.com:6379
+      - JWT_SECRET=${JWT_SECRET}
+      - AI_API_KEY=${AI_API_KEY}
+      - API_KEY_UNICOURT=${UNICOURT_API_KEY}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+    behavior: merge
+
+# Set container images for staging
+images:
+  - name: justicebid/frontend
+    newName: 123456789012.dkr.ecr.us-east-1.amazonaws.com/justicebid/frontend
+    newTag: staging
+  - name: justicebid/api-gateway
+    newName: 123456789012.dkr.ecr.us-east-1.amazonaws.com/justicebid/api-gateway
+    newTag: staging
+  - name: justicebid/rate-service
+    newName: 123456789012.dkr.ecr.us-east-1.amazonaws.com/justicebid/rate-service
+    newTag: staging
+  - name: justicebid/negotiation-service
+    newName: 123456789012.dkr.ecr.us-east-1.amazonaws.com/justicebid/negotiation-service
+    newTag: staging
+  - name: justicebid/analytics-service
+    newName: 123456789012.dkr.ecr.us-east-1.amazonaws.com/justicebid/analytics-service
+    newTag: staging
+  - name: justicebid/integration-service
+    newName: 123456789012.dkr.ecr.us-east-1.amazonaws.com/justicebid/integration-service
+    newTag: staging
+  - name: justicebid/ai-service
+    newName: 123456789012.dkr.ecr.us-east-1.amazonaws.com/justicebid/ai-service
+    newTag: staging
+  - name: justicebid/document-service
+    newName: 123456789012.dkr.ecr.us-east-1.amazonaws.com/justicebid/document-service
+    newTag: staging
+  - name: justicebid/messaging-service
+    newName: 123456789012.dkr.ecr.us-east-1.amazonaws.com/justicebid/messaging-service
+    newTag: staging
+  - name: justicebid/organization-service
+    newName: 123456789012.dkr.ecr.us-east-1.amazonaws.com/justicebid/organization-service
+    newTag: staging
+
+# Apply JSON patches for resource limits and other configurations
+patchesJson6902:
+  - target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: frontend
+    path: patches/frontend-resource-limits.yaml
+  - target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: api-gateway
+    path: patches/api-gateway-resource-limits.yaml
+  - target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: analytics-service
+    path: patches/analytics-resource-limits.yaml
+  - target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: ai-service
+    path: patches/ai-service-resource-limits.yaml
+  - target:
+      group: networking.k8s.io
+      version: v1
+      kind: Ingress
+      name: justice-bid-ingress
+    path: patches/ingress-staging.yaml
+
+# Set replica counts for deployments
+replicas:
+  - name: frontend
+    count: 2
+  - name: api-gateway
+    count: 2
+  - name: rate-service
+    count: 2
+  - name: negotiation-service
+    count: 2
+  - name: analytics-service
+    count: 2
+  - name: integration-service
+    count: 2
+  - name: ai-service
+    count: 2
+  - name: document-service
+    count: 2
+  - name: messaging-service
+    count: 2
+  - name: organization-service
+    count: 2
