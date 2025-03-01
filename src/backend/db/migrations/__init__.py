@@ -1,0 +1,1 @@
+"""Database migrations package for the Justice Bid Rate Negotiation System. Works with Alembic to provide versioned database schema changes and migrations."""
