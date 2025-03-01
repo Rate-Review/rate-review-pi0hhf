@@ -101,7 +101,7 @@ jobs:
         run: bash infrastructure/scripts/deploy.sh tag_and_push ${{ env.TF_VAR_version }} ${{ needs.prepare.outputs.environment }}
       
       - name: Setup Kubectl
-        uses: azure/setup-kubectl@v3
+        uses: azure/setup-kubectl@v4
         with:
           version: 'v1.25.0'
       
