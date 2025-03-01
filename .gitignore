@@ -1,0 +1,58 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+.venv/
+env/
+*.egg-info/
+.coverage
+.pytest_cache/
+
+# JavaScript
+node_modules/
+dist/
+build/
+npm-debug.log*
+yarn-error.log*
+.next/
+.cache/
+
+# Docker
+.docker/data/
+docker-compose.override.yml
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+
+# IDE
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+*.swp
+
+# System
+.DS_Store
+Thumbs.db
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+
+# Environment and Secrets
+.env.local
+.env.development.local
+.env.production.local
+.env*
+!.env.example
+*.pem
+*.crt
+*.key
+
+# Logs
+logs/
+*.log
