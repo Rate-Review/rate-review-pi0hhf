@@ -1,0 +1,151 @@
+version: '3.8'
+
+services:
+  # Frontend React application
+  frontend:
+    build:
+      context: ./src/web
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./src/web:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      VITE_API_BASE_URL: http://localhost:5000/api/v1
+      VITE_DEV_MODE: "true"
+    depends_on:
+      - api
+
+  # Backend API service
+  api:
+    build:
+      context: ./src/backend
+      dockerfile: Dockerfile
+    command: flask run --host=0.0.0.0 --port=5000 --debug
+    volumes:
+      - ./src/backend:/app
+    ports:
+      - "5000:5000"
+    environment:
+      FLASK_APP: main.py
+      FLASK_ENV: development
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/justice_bid
+      REDIS_URL: redis://redis:6379/0
+      MONGODB_URI: mongodb://mongodb:27017/justice_bid
+      CELERY_BROKER_URL: amqp://guest:guest@rabbitmq:5672/
+      JWT_SECRET_KEY: dev_secret_key
+      CORS_ORIGINS: "*"
+      DEBUG: "true"
+    depends_on:
+      - postgres
+      - redis
+      - mongodb
+      - rabbitmq
+
+  # Celery worker for background tasks
+  celery_worker:
+    build:
+      context: ./src/backend
+      dockerfile: Dockerfile
+    command: celery -A tasks.celery_app worker --loglevel=info
+    volumes:
+      - ./src/backend:/app
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/justice_bid
+      REDIS_URL: redis://redis:6379/0
+      MONGODB_URI: mongodb://mongodb:27017/justice_bid
+      CELERY_BROKER_URL: amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      - api
+      - rabbitmq
+
+  # Celery beat for scheduled tasks
+  celery_beat:
+    build:
+      context: ./src/backend
+      dockerfile: Dockerfile
+    command: celery -A tasks.celery_app beat --loglevel=info
+    volumes:
+      - ./src/backend:/app
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/justice_bid
+      REDIS_URL: redis://redis:6379/0
+      MONGODB_URI: mongodb://mongodb:27017/justice_bid
+      CELERY_BROKER_URL: amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      - api
+      - celery_worker
+      - rabbitmq
+
+  # PostgreSQL database
+  postgres:
+    image: postgres:15-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: justice_bid
+    command: ["postgres", "-c", "log_statement=all"]
+
+  # Redis for caching
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  # MongoDB for document storage
+  mongodb:
+    image: mongo:6
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: justice_bid
+
+  # RabbitMQ for message broker
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+
+  # Elasticsearch for search
+  elasticsearch:
+    image: elasticsearch:8.8.0
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    environment:
+      discovery.type: single-node
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+      xpack.security.enabled: "false"
+
+  # Adminer for database administration
+  adminer:
+    image: adminer:latest
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+      - mongodb
+
+volumes:
+  postgres_data: {}
+  redis_data: {}
+  mongodb_data: {}
+  rabbitmq_data: {}
+  elasticsearch_data: {}
