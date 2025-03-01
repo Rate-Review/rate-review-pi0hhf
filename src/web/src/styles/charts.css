@@ -1,0 +1,347 @@
+/* 
+ * Justice Bid Rate Negotiation System
+ * Chart Styling
+ * 
+ * This file contains styling for chart components including bar charts,
+ * line charts, pie charts, and specialized rate analytics visualizations.
+ */
+
+/* Chart Color Variables */
+:root {
+  --chart-primary: var(--color-primary, #2C5282);
+  --chart-secondary: var(--color-secondary, #38A169);
+  --chart-accent: var(--color-accent, #DD6B20);
+  --chart-neutral: var(--color-neutral, #718096);
+  --chart-success: var(--color-success, #38A169);
+  --chart-warning: var(--color-warning, #DD6B20);
+  --chart-error: var(--color-error, #E53E3E);
+  --chart-info: var(--color-info, #3182CE);
+  
+  /* Chart Color Palette */
+  --chart-color-1: var(--chart-primary);
+  --chart-color-2: var(--chart-secondary);
+  --chart-color-3: var(--chart-accent);
+  --chart-color-4: #805AD5; /* Purple */
+  --chart-color-5: #3182CE; /* Blue */
+  --chart-color-6: #38B2AC; /* Teal */
+  --chart-color-7: #ED8936; /* Orange */
+  --chart-color-8: #D53F8C; /* Pink */
+}
+
+/* Base Chart Container */
+.chart-container {
+  width: 100%;
+  max-width: 900px;
+  height: auto;
+  margin: 0 auto;
+  position: relative;
+  padding: 1rem;
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Responsive Chart Container */
+.chart-responsive {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  display: block;
+}
+
+/* Chart Typography */
+.chart-title {
+  font-size: 1.2rem;
+  font-weight: 500;
+  margin-bottom: 1rem;
+  text-align: center;
+  color: var(--chart-primary);
+}
+
+.chart-subtitle {
+  font-size: 0.95rem;
+  font-weight: 400;
+  margin-bottom: 0.75rem;
+  text-align: center;
+  color: var(--chart-neutral);
+}
+
+.chart-annotation {
+  font-size: 0.75rem;
+  font-style: italic;
+  color: var(--chart-info);
+  margin-top: 0.5rem;
+  text-align: center;
+}
+
+/* Chart Legend */
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 1rem;
+  gap: 1rem;
+}
+
+.chart-legend-item {
+  display: flex;
+  align-items: center;
+  font-size: 0.875rem;
+}
+
+.chart-legend-color {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 2px;
+  margin-right: 0.5rem;
+}
+
+/* Chart Tooltip */
+.chart-tooltip {
+  background-color: rgba(44, 82, 130, 0.9);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Chart Axis and Grid Styling */
+.chart-axis {
+  color: var(--chart-neutral);
+  font-size: 0.75rem;
+}
+
+.chart-grid {
+  stroke: rgba(113, 128, 150, 0.1);
+  stroke-dasharray: 4 4;
+}
+
+/* Bar Chart Styling */
+.chart-bar {
+  border-radius: 4px 4px 0 0;
+  transition: opacity 0.2s ease;
+}
+
+.chart-bar:hover {
+  opacity: 0.8;
+}
+
+/* Line Chart Styling */
+.chart-line {
+  stroke-width: 2;
+  fill: none;
+}
+
+.chart-line-point {
+  stroke-width: 2;
+  fill: white;
+  transition: r 0.2s ease;
+}
+
+.chart-line-point:hover {
+  r: 6;
+}
+
+.chart-line-area {
+  opacity: 0.1;
+}
+
+/* Pie Chart Styling */
+.chart-pie {
+  max-width: 350px;
+  margin: 0 auto;
+}
+
+.chart-pie-slice {
+  transition: opacity 0.2s ease;
+}
+
+.chart-pie-slice:hover {
+  opacity: 0.8;
+}
+
+.chart-pie-label {
+  font-size: 0.75rem;
+  fill: var(--chart-neutral);
+}
+
+/* Specialized Rate Analysis Charts */
+.rate-impact-chart {
+  height: 350px;
+}
+
+.rate-impact-chart .chart-bar.positive {
+  fill: var(--chart-success);
+}
+
+.rate-impact-chart .chart-bar.negative {
+  fill: var(--chart-error);
+}
+
+.peer-comparison-chart {
+  height: 300px;
+}
+
+.peer-comparison-chart .chart-bar.below-average {
+  fill: var(--chart-success);
+}
+
+.peer-comparison-chart .chart-bar.above-average {
+  fill: var(--chart-warning);
+}
+
+.peer-comparison-chart .average-line {
+  stroke: var(--chart-primary);
+  stroke-dasharray: 5 5;
+  stroke-width: 2;
+}
+
+.historical-trends-chart {
+  height: 350px;
+}
+
+.historical-trends-chart .inflation-line {
+  stroke: var(--chart-warning);
+  stroke-dasharray: 5 5;
+  stroke-width: 1.5;
+}
+
+.attorney-performance-chart {
+  height: 300px;
+}
+
+.attorney-performance-chart .performance-threshold {
+  stroke: var(--chart-info);
+  stroke-dasharray: 3 3;
+  stroke-width: 1.5;
+}
+
+/* Chart Animations */
+.chart-animate-fade {
+  animation: chartFadeIn 0.5s ease-in-out;
+}
+
+.chart-animate-grow {
+  animation: chartGrow 0.7s ease-out;
+}
+
+@keyframes chartFadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes chartGrow {
+  0% {
+    transform: scaleY(0);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+/* Accessibility Enhancements */
+.chart-focus-visible {
+  outline: 2px solid var(--chart-primary);
+  outline-offset: 2px;
+}
+
+.chart-high-contrast {
+  filter: contrast(1.5);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .chart-container {
+    max-width: 100%;
+    padding: 0.75rem;
+  }
+  
+  .chart-title {
+    font-size: 1rem;
+  }
+  
+  .chart-subtitle {
+    font-size: 0.85rem;
+  }
+  
+  .chart-legend {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .rate-impact-chart,
+  .peer-comparison-chart,
+  .historical-trends-chart,
+  .attorney-performance-chart {
+    height: 300px;
+  }
+}
+
+@media (max-width: 480px) {
+  .chart-responsive {
+    aspect-ratio: 4 / 3;
+  }
+  
+  .chart-title {
+    font-size: 0.875rem;
+  }
+  
+  .chart-subtitle {
+    font-size: 0.8rem;
+  }
+  
+  .chart-legend-item {
+    font-size: 0.75rem;
+  }
+  
+  .rate-impact-chart,
+  .peer-comparison-chart,
+  .historical-trends-chart,
+  .attorney-performance-chart {
+    height: 250px;
+  }
+}
+
+/* Accessibility - Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .chart-animate-fade,
+  .chart-animate-grow,
+  .chart-bar,
+  .chart-line-point,
+  .chart-pie-slice {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .chart-container {
+    page-break-inside: avoid;
+    max-width: 100%;
+    height: auto;
+    box-shadow: none;
+    border: 1px solid #e2e8f0;
+  }
+  
+  .chart-tooltip {
+    display: none !important;
+  }
+  
+  .chart-legend {
+    display: block;
+    columns: 2;
+  }
+  
+  .chart-legend-item {
+    break-inside: avoid;
+    margin-bottom: 0.25rem;
+  }
+}
