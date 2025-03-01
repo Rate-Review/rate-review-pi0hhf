@@ -1,0 +1,458 @@
+name: Security Scans
+
+on:
+  schedule:
+    # Run weekly on Sunday at midnight
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+    # Allow manual triggering
+  push:
+    branches:
+      - main
+    paths:
+      # Run on pushes affecting application or infrastructure code
+      - 'src/**'
+      - 'frontend/**'
+      - 'backend/**'
+      - 'infrastructure/**'
+      - 'terraform/**'
+      - 'docker/**'
+      - 'Dockerfile*'
+      - 'docker-compose*.yml'
+
+jobs:
+  sast:
+    name: Static Application Security Testing
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Fetch all history for SonarQube
+      
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v1.1.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install Bandit
+        run: pip install bandit
+      
+      - name: Run Bandit (Python SAST)
+        run: bandit -r backend/ -f json -o bandit-results.json || true
+      
+      - name: Upload SAST Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: sast-results
+          path: |
+            bandit-results.json
+            .scannerwork/report-task.txt
+          retention-days: 7
+
+  dependency-check:
+    name: Dependency Vulnerability Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: '**/requirements.txt'
+      
+      - name: Install frontend dependencies
+        run: |
+          if [ -d "frontend" ]; then
+            cd frontend
+            npm ci
+          fi
+      
+      - name: Install backend dependencies
+        run: |
+          if [ -d "backend" ]; then
+            cd backend
+            pip install -r requirements.txt
+          fi
+      
+      - name: Snyk JavaScript Scan
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --all-projects --json-file-output=snyk-js-results.json
+      
+      - name: Snyk Python Scan
+        uses: snyk/actions/python@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --all-projects --json-file-output=snyk-py-results.json
+      
+      - name: Upload Dependency Scan Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: dependency-scan-results
+          path: |
+            snyk-js-results.json
+            snyk-py-results.json
+          retention-days: 7
+
+  container-scan:
+    name: Container Security Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Build Docker images
+        run: |
+          if [ -f "docker-compose.yml" ]; then
+            docker-compose build
+          else
+            echo "No docker-compose.yml found, building individual Dockerfiles"
+            if [ -f "Dockerfile.backend" ]; then
+              docker build -t justicebid-backend:latest -f Dockerfile.backend .
+            fi
+            if [ -f "Dockerfile.frontend" ]; then
+              docker build -t justicebid-frontend:latest -f Dockerfile.frontend .
+            fi
+          fi
+      
+      - name: Scan Backend Container
+        uses: aquasecurity/trivy-action@master
+        continue-on-error: true
+        with:
+          image-ref: 'justicebid-backend:latest'
+          format: 'json'
+          output: 'trivy-backend-results.json'
+          severity: 'CRITICAL,HIGH'
+      
+      - name: Scan Frontend Container
+        uses: aquasecurity/trivy-action@master
+        continue-on-error: true
+        with:
+          image-ref: 'justicebid-frontend:latest'
+          format: 'json'
+          output: 'trivy-frontend-results.json'
+          severity: 'CRITICAL,HIGH'
+      
+      - name: Upload Container Scan Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: container-scan-results
+          path: |
+            trivy-backend-results.json
+            trivy-frontend-results.json
+          retention-days: 7
+
+  secret-detection:
+    name: Secret Detection
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Full history for secret detection
+      
+      - name: GitLeaks Secret Scan
+        uses: zricethezav/gitleaks-action@v1.6.0
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_OUTPUT: gitleaks-results.json
+          GITLEAKS_OPTIONS: "--format json"
+      
+      - name: Upload Secret Scan Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: secret-scan-results
+          path: gitleaks-results.json
+          retention-days: 7
+
+  infrastructure-scan:
+    name: Infrastructure as Code Security Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Run tfsec
+        uses: aquasecurity/tfsec-action@v1.0.0
+        continue-on-error: true
+        with:
+          soft_fail: true
+          format: json
+          out_file: tfsec-results.json
+      
+      - name: Upload Infrastructure Scan Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: infrastructure-scan-results
+          path: tfsec-results.json
+          retention-days: 7
+
+  generate-report:
+    name: Generate Security Report
+    needs: [sast, dependency-check, container-scan, secret-detection, infrastructure-scan]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: security-scan-results
+      
+      - name: Install report generation dependencies
+        run: pip install jinja2 markdown
+      
+      - name: Generate consolidated report
+        run: |
+          echo "Generating security report..."
+          
+          cat << EOF > generate_report.py
+          import json
+          import os
+          import glob
+          from datetime import datetime
+          from jinja2 import Template
+          
+          # Find all JSON result files
+          result_files = glob.glob('security-scan-results/**/*.json', recursive=True)
+          
+          # Initialize counters
+          total_critical = 0
+          total_high = 0
+          total_medium = 0
+          total_low = 0
+          findings = []
+          
+          # Process each result file
+          for file_path in result_files:
+              scan_type = os.path.basename(os.path.dirname(file_path))
+              
+              try:
+                  with open(file_path, 'r') as f:
+                      data = json.load(f)
+                      
+                  # Different scanners have different output formats
+                  # This is a simplified example and would need to be adapted
+                  # for each scanner's actual output format
+                  if 'vulnerabilities' in data:
+                      # Snyk-like format
+                      for vuln in data.get('vulnerabilities', []):
+                          severity = vuln.get('severity', '').lower()
+                          findings.append({
+                              'scanner': scan_type,
+                              'severity': severity,
+                              'title': vuln.get('title', 'Unknown'),
+                              'description': vuln.get('description', 'No description'),
+                              'location': vuln.get('packageName', 'Unknown')
+                          })
+                          
+                          if severity == 'critical':
+                              total_critical += 1
+                          elif severity == 'high':
+                              total_high += 1
+                          elif severity == 'medium':
+                              total_medium += 1
+                          elif severity == 'low':
+                              total_low += 1
+                  
+                  # Add more parsers for different scanner outputs
+                  
+              except Exception as e:
+                  print(f"Error processing {file_path}: {e}")
+          
+          # Create HTML report
+          template_str = """
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>Justice Bid Security Scan Report</title>
+              <style>
+                  body { font-family: Arial, sans-serif; margin: 20px; }
+                  h1, h2 { color: #2C5282; }
+                  .summary { margin: 20px 0; padding: 15px; background-color: #f8f9fa; border-radius: 5px; }
+                  .critical { color: #721c24; background-color: #f8d7da; padding: 3px 6px; border-radius: 3px; }
+                  .high { color: #856404; background-color: #fff3cd; padding: 3px 6px; border-radius: 3px; }
+                  .medium { color: #0c5460; background-color: #d1ecf1; padding: 3px 6px; border-radius: 3px; }
+                  .low { color: #155724; background-color: #d4edda; padding: 3px 6px; border-radius: 3px; }
+                  table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                  th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                  th { background-color: #f2f2f2; }
+                  tr:nth-child(even) { background-color: #f9f9f9; }
+              </style>
+          </head>
+          <body>
+              <h1>Justice Bid Security Scan Report</h1>
+              <p>Generated on {{ date }}</p>
+              
+              <div class="summary">
+                  <h2>Summary</h2>
+                  <p><span class="critical">Critical: {{ critical }}</span> | 
+                     <span class="high">High: {{ high }}</span> | 
+                     <span class="medium">Medium: {{ medium }}</span> | 
+                     <span class="low">Low: {{ low }}</span></p>
+              </div>
+              
+              {% if findings %}
+              <h2>Findings</h2>
+              <table>
+                  <tr>
+                      <th>Scanner</th>
+                      <th>Severity</th>
+                      <th>Title</th>
+                      <th>Description</th>
+                      <th>Location</th>
+                  </tr>
+                  {% for finding in findings %}
+                  <tr>
+                      <td>{{ finding.scanner }}</td>
+                      <td><span class="{{ finding.severity }}">{{ finding.severity.upper() }}</span></td>
+                      <td>{{ finding.title }}</td>
+                      <td>{{ finding.description }}</td>
+                      <td>{{ finding.location }}</td>
+                  </tr>
+                  {% endfor %}
+              </table>
+              {% else %}
+              <p>No findings detected.</p>
+              {% endif %}
+          </body>
+          </html>
+          """
+          
+          template = Template(template_str)
+          
+          report_html = template.render(
+              date=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+              critical=total_critical,
+              high=total_high,
+              medium=total_medium,
+              low=total_low,
+              findings=findings
+          )
+          
+          with open('security-report.html', 'w') as f:
+              f.write(report_html)
+          
+          # Also create a JSON summary for other jobs to use
+          summary = {
+              'total_critical': total_critical,
+              'total_high': total_high,
+              'total_medium': total_medium,
+              'total_low': total_low,
+              'has_critical_findings': total_critical > 0
+          }
+          
+          with open('security-summary.json', 'w') as f:
+              json.dump(summary, f)
+          
+          print("Report generated successfully")
+          EOF
+          
+          python generate_report.py
+      
+      - name: Upload consolidated report
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-report
+          path: |
+            security-report.html
+            security-summary.json
+          retention-days: 30
+
+  notification:
+    name: Send Security Notifications
+    needs: generate-report
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Download security summary
+        uses: actions/download-artifact@v3
+        with:
+          name: security-report
+          path: security-report
+      
+      - name: Check for critical findings
+        id: check-critical
+        run: |
+          CRITICAL_FINDINGS=$(cat security-report/security-summary.json | jq '.has_critical_findings')
+          echo "has_critical_findings=$CRITICAL_FINDINGS" >> $GITHUB_OUTPUT
+          CRITICAL_COUNT=$(cat security-report/security-summary.json | jq '.total_critical')
+          HIGH_COUNT=$(cat security-report/security-summary.json | jq '.total_high')
+          echo "critical_count=$CRITICAL_COUNT" >> $GITHUB_OUTPUT
+          echo "high_count=$HIGH_COUNT" >> $GITHUB_OUTPUT
+      
+      - name: Send Slack notification
+        if: steps.check-critical.outputs.has_critical_findings == 'true'
+        uses: slackapi/slack-github-action@v1.23.0
+        with:
+          payload: |
+            {
+              "text": "🚨 Critical security issues detected in Justice Bid!",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*🚨 Security scan detected critical vulnerabilities!*"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "• Critical issues: ${{ steps.check-critical.outputs.critical_count }}\n• High issues: ${{ steps.check-critical.outputs.high_count }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "Please check the <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|security scan results> immediately."
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_SECURITY_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+      
+      - name: Create GitHub issue for critical findings
+        if: steps.check-critical.outputs.has_critical_findings == 'true'
+        uses: JasonEtco/create-an-issue@v2.9.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          filename: .github/ISSUE_TEMPLATE/security-findings.md
+          update_existing: true
+          search_existing: open
