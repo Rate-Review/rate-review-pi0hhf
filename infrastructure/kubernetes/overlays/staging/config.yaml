@@ -1,0 +1,92 @@
+# Justice Bid Rate Negotiation System - Staging Environment Configuration
+# This configuration file contains staging-specific settings for the Kubernetes deployment
+
+# Environment settings
+ENVIRONMENT: staging
+LOG_LEVEL: INFO
+FLASK_ENV: staging
+DEBUG: "false"
+VITE_API_URL: https://staging-api.justicebid.com/api
+
+# Database settings
+DATABASE_HOST: jb-staging-postgres.cluster-xxx.us-east-1.rds.amazonaws.com
+DATABASE_NAME: justicebid
+DATABASE_PORT: "5432"
+DATABASE_POOL_SIZE: "30"
+DATABASE_READ_REPLICA_HOST: jb-staging-postgres-ro.cluster-xxx.us-east-1.rds.amazonaws.com
+
+# NoSQL database, cache and message queue settings
+MONGODB_HOST: mongodb-service
+REDIS_HOST: jb-staging-redis.xxx.us-east-1.cache.amazonaws.com
+REDIS_PORT: "6379"
+REDIS_TTL: "1800"
+RABBITMQ_HOST: rabbitmq-service
+CELERY_BROKER_URL: amqp://rabbitmq-service:5672
+CELERY_RESULT_BACKEND: redis://jb-staging-redis.xxx.us-east-1.cache.amazonaws.com:6379/0
+
+# Storage settings
+S3_BUCKET: jb-staging-data
+S3_REGION: us-east-1
+S3_DOCUMENTS_PATH: documents/
+S3_EXPORTS_PATH: exports/
+S3_IMPORTS_PATH: imports/
+
+# Service endpoints
+AI_SERVICE_HOST: ai-service
+ANALYTICS_SERVICE_HOST: analytics-service
+INTEGRATION_SERVICE_HOST: integration-service
+
+# AI configuration
+AI_PROVIDER: openai
+AI_MODEL: gpt-4
+AI_MAX_TOKENS: "4096"
+
+# Security and API settings
+CORS_ORIGINS: https://staging.justicebid.com
+API_RATE_LIMIT: "50"
+API_TIMEOUT: "30"
+SESSION_TIMEOUT: "7200"
+IDLE_TIMEOUT: "1800"
+
+# Feature flags
+ENABLE_ANALYTICS: "true"
+ENABLE_FILE_IMPORT: "true"
+ENABLE_UNICOURT: "true"
+ENABLE_REAL_TIME_NEGOTIATION: "true"
+
+# External API endpoints
+UNICOURT_API_ENDPOINT: https://api.unicourt.com/v1/
+ONIT_API_ENDPOINT: https://api.onit.com/api/v1/
+TEAMCONNECT_API_ENDPOINT: https://api.teamconnect.com/api/v3/
+LEGAL_TRACKER_API_ENDPOINT: https://api.legaltracker.com/api/
+
+# Worker and monitoring settings
+WORKER_CONCURRENCY: "15"
+ENABLE_PROMETHEUS: "true"
+ENABLE_TRACING: "true"
+TRACING_SAMPLE_RATE: "0.2"
+HEALTH_CHECK_INTERVAL: "30"
+
+# Resource limits - Medium sized staging environment (12 vCPUs, 48 GB RAM)
+RESOURCE_LIMITS:
+  BACKEND_CPU: 1000m
+  BACKEND_MEMORY: 2Gi
+  FRONTEND_CPU: 500m
+  FRONTEND_MEMORY: 1Gi
+  ANALYTICS_CPU: 2000m
+  ANALYTICS_MEMORY: 4Gi
+  AI_CPU: 2000m
+  AI_MEMORY: 4Gi
+  CELERY_CPU: 1000m
+  CELERY_MEMORY: 2Gi
+  INTEGRATION_CPU: 1000m
+  INTEGRATION_MEMORY: 2Gi
+
+# Replica counts for staging environment
+REPLICAS:
+  BACKEND: "2"
+  FRONTEND: "2"
+  ANALYTICS: "2"
+  AI: "2"
+  CELERY: "2"
+  INTEGRATION: "2"
