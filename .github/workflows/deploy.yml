@@ -1,0 +1,193 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        type: choice
+        options:
+          - dev
+          - staging
+          - production
+        required: true
+        default: 'dev'
+      version:
+        description: 'Version/tag to deploy'
+        type: string
+        required: true
+  workflow_run:
+    workflows: ['Build']
+    types: [completed]
+    branches: ['main']
+
+env:
+  TF_VAR_version: ${{ github.event.inputs.version || github.run_number }}
+  AWS_REGION: 'us-east-1'
+
+jobs:
+  prepare:
+    name: Prepare Deployment
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.set-env.outputs.environment }}
+    steps:
+      - name: Set Environment
+        id: set-env
+        run: echo "environment=${{ github.event.inputs.environment || 'dev' }}" >> $GITHUB_OUTPUT
+
+  deploy-infrastructure:
+    name: Deploy Infrastructure
+    needs: [prepare]
+    runs-on: ubuntu-latest
+    environment: ${{ needs.prepare.outputs.environment }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: '1.5.0'
+      
+      - name: Terraform Init
+        run: cd infrastructure/terraform/environments/${{ needs.prepare.outputs.environment }} && terraform init
+      
+      - name: Terraform Validate
+        run: cd infrastructure/terraform/environments/${{ needs.prepare.outputs.environment }} && terraform validate
+      
+      - name: Terraform Plan
+        run: cd infrastructure/terraform/environments/${{ needs.prepare.outputs.environment }} && terraform plan -var="version=${{ env.TF_VAR_version }}"
+      
+      - name: Terraform Apply
+        run: cd infrastructure/terraform/environments/${{ needs.prepare.outputs.environment }} && terraform apply -auto-approve -var="version=${{ env.TF_VAR_version }}"
+
+  deploy-application:
+    name: Deploy Application
+    needs: [prepare, deploy-infrastructure]
+    runs-on: ubuntu-latest
+    environment: ${{ needs.prepare.outputs.environment }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: docker-images
+          path: ./artifacts
+      
+      - name: Load Docker images
+        run: docker load -i ./artifacts/images.tar
+      
+      - name: Login to ECR
+        run: aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
+      
+      - name: Tag and push Docker images
+        run: bash infrastructure/scripts/deploy.sh tag_and_push ${{ env.TF_VAR_version }} ${{ needs.prepare.outputs.environment }}
+      
+      - name: Setup Kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.25.0'
+      
+      - name: Configure Kubernetes
+        run: aws eks update-kubeconfig --name justice-bid-${{ needs.prepare.outputs.environment }} --region ${{ env.AWS_REGION }}
+      
+      - name: Deploy to Kubernetes
+        run: cd infrastructure/kubernetes/overlays/${{ needs.prepare.outputs.environment }} && kustomize edit set image justice-bid-frontend=${{ secrets.ECR_REGISTRY }}/justice-bid-frontend:${{ env.TF_VAR_version }} justice-bid-backend=${{ secrets.ECR_REGISTRY }}/justice-bid-backend:${{ env.TF_VAR_version }} && kustomize build | kubectl apply -f -
+      
+      - name: Wait for deployment
+        run: kubectl rollout status deployment/justice-bid-frontend deployment/justice-bid-backend -n justice-bid-${{ needs.prepare.outputs.environment }} --timeout=300s
+
+  run-smoke-tests:
+    name: Run Smoke Tests
+    needs: [prepare, deploy-application]
+    runs-on: ubuntu-latest
+    environment: ${{ needs.prepare.outputs.environment }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.x'
+      
+      - name: Install dependencies
+        run: cd src/web && npm ci
+      
+      - name: Run smoke tests
+        run: cd src/web && npm run test:smoke -- --url=https://${{ needs.prepare.outputs.environment }}.justicebid.example.com
+
+  post-deployment:
+    name: Post-Deployment Tasks
+    needs: [prepare, deploy-application, run-smoke-tests]
+    runs-on: ubuntu-latest
+    if: success()
+    environment: ${{ needs.prepare.outputs.environment }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: cd src/backend && pip install -r requirements.txt
+      
+      - name: Run database migrations
+        run: cd src/backend && python -m alembic upgrade head
+        env:
+          FLASK_ENV: ${{ needs.prepare.outputs.environment }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      
+      - name: Create deployment tag
+        run: git tag deployment-${{ needs.prepare.outputs.environment }}-${{ env.TF_VAR_version }} && git push origin deployment-${{ needs.prepare.outputs.environment }}-${{ env.TF_VAR_version }}
+
+  notify:
+    name: Send Notifications
+    needs: [prepare, deploy-application, run-smoke-tests, post-deployment]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Slack notification - Success
+        if: success()
+        uses: slackapi/slack-github-action@v1.23.0
+        with:
+          channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
+          payload: '{"text":"✅ Successfully deployed version ${{ env.TF_VAR_version }} to ${{ needs.prepare.outputs.environment }} environment"}'
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+      
+      - name: Slack notification - Failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1.23.0
+        with:
+          channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
+          payload: '{"text":"❌ Failed to deploy version ${{ env.TF_VAR_version }} to ${{ needs.prepare.outputs.environment }} environment"}'
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
