@@ -1,0 +1,139 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  frontend-checks:
+    name: Frontend Quality Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: 'npm'
+          cache-dependency-path: 'src/web/package-lock.json'
+          
+      - name: Install dependencies
+        run: npm ci
+        working-directory: src/web
+        
+      - name: Run ESLint
+        run: npm run lint
+        working-directory: src/web
+        
+      - name: TypeScript type checking
+        run: npm run type-check
+        working-directory: src/web
+        
+      - name: Run unit tests with coverage
+        run: npm test -- --coverage
+        working-directory: src/web
+        
+      - name: Verify coverage thresholds
+        run: |
+          COVERAGE_OUTPUT=$(npm test -- --coverage --coverageThreshold='{"global":{"lines":80,"functions":90,"branches":75}}' 2>&1 || true)
+          if echo "$COVERAGE_OUTPUT" | grep -q "ERROR: Coverage"; then
+            echo "Coverage thresholds not met:"
+            echo "$COVERAGE_OUTPUT" | grep "ERROR: Coverage"
+            exit 1
+          else
+            echo "Coverage thresholds met!"
+          fi
+        working-directory: src/web
+
+  backend-checks:
+    name: Backend Quality Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pylint
+        working-directory: src/api
+        
+      - name: Run Pylint
+        run: |
+          pylint_output=$(pylint --fail-under=8.0 $(find . -name "*.py" | grep -v "test_") 2>&1 || true)
+          echo "$pylint_output"
+          if echo "$pylint_output" | grep -q "Your code has been rated at"; then
+            score=$(echo "$pylint_output" | grep -oP "Your code has been rated at \K[0-9.]+")
+            if (( $(echo "$score < 8.0" | bc -l) )); then
+              echo "Pylint score $score is below threshold 8.0"
+              exit 1
+            else
+              echo "Pylint score $score meets threshold"
+            fi
+          else
+            echo "Failed to run pylint"
+            exit 1
+          fi
+        working-directory: src/api
+        
+      - name: Run unit tests with coverage
+        run: |
+          pytest --cov=. --cov-report=xml:coverage.xml
+        working-directory: src/api
+        
+      - name: Verify coverage threshold
+        run: |
+          coverage_output=$(pytest --cov=. --cov-fail-under=85 2>&1 || true)
+          if echo "$coverage_output" | grep -q "FAIL Required test coverage of 85% not reached"; then
+            echo "Coverage threshold not met:"
+            echo "$coverage_output" | grep "FAIL Required test coverage"
+            exit 1
+          else
+            echo "Coverage threshold met!"
+          fi
+        working-directory: src/api
+
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Required for SonarCloud analysis
+        
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.projectKey=justice-bid-rate-negotiation
+            -Dsonar.organization=justice-bid
+            -Dsonar.sources=src
+            -Dsonar.exclusions=**/*.test.js,**/*.test.ts,**/*.test.tsx,**/*.spec.py,**/test_*.py
+            -Dsonar.javascript.lcov.reportPaths=src/web/coverage/lcov.info
+            -Dsonar.python.coverage.reportPaths=src/api/coverage.xml
+            
+      - name: Snyk Security Scan
+        uses: snyk/actions/node@master
+        continue-on-error: true  # Don't fail the build, but report vulnerabilities
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
