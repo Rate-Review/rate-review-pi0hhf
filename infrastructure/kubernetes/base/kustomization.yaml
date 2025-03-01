@@ -1,0 +1,45 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Resources to be included in this kustomization
+resources:
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml
+
+# Namespace for all resources
+namespace: justice-bid
+
+# Common labels to be applied to all resources
+commonLabels:
+  app: justice-bid
+  component: rate-negotiation
+  managed-by: kustomize
+
+# Common annotations to be applied to all resources
+commonAnnotations:
+  description: "Justice Bid Rate Negotiation System - Enterprise legal rate management platform"
+  contact: "devops@justicebid.com"
+
+# ConfigMap generators
+configMapGenerator:
+  - name: justice-bid-config
+    literals:
+      - LOG_LEVEL=info
+      - ENABLE_METRICS=true
+      - API_VERSION=v1
+      - AI_PROVIDER=openai
+      - DEFAULT_CURRENCY=USD
+      - MAX_RETRY_ATTEMPTS=3
+      - DATA_RETENTION_DAYS=2555  # 7 years
+
+# Secret generators (values will be replaced in overlays)
+secretGenerator:
+  - name: justice-bid-secrets
+    literals:
+      - DATABASE_URL=placeholder
+      - REDIS_URL=placeholder
+      - JWT_SECRET=placeholder
+      - AI_API_KEY=placeholder
+      - API_KEY_UNICOURT=placeholder
+      - ENCRYPTION_KEY=placeholder
