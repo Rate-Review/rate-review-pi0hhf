@@ -1,0 +1,224 @@
+version: '3.8'
+
+services:
+  frontend:
+    image: justice-bid-frontend:latest
+    build:
+      context: ../../src/web
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: production
+    environment:
+      - NODE_ENV=production
+      - REACT_APP_API_URL=https://api.justicebid.com
+      - REACT_APP_SENTRY_DSN=${SENTRY_DSN}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "--quiet", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: '2G'
+    ports:
+      - 80:80
+    networks:
+      - justice-bid-network
+    depends_on:
+      - api
+
+  api:
+    image: justice-bid-api:latest
+    build:
+      context: ../../src/backend
+      dockerfile: Dockerfile
+      args:
+        FLASK_ENV: production
+    environment:
+      - FLASK_ENV=production
+      - FLASK_APP=main.py
+      - DATABASE_URL=${DB_URL}
+      - REDIS_URL=redis://redis:6379/0
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - JWT_SECRET=${JWT_SECRET}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - UNICOURT_API_KEY=${UNICOURT_API_KEY}
+      - S3_BUCKET=${S3_BUCKET}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - SENTRY_DSN=${SENTRY_DSN}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: '4G'
+    ports:
+      - 5000:5000
+    networks:
+      - justice-bid-network
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+      - elasticsearch
+
+  worker:
+    image: justice-bid-api:latest
+    command: celery -A tasks.celery_app worker --loglevel=info
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=${DB_URL}
+      - REDIS_URL=redis://redis:6379/0
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - JWT_SECRET=${JWT_SECRET}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - UNICOURT_API_KEY=${UNICOURT_API_KEY}
+      - S3_BUCKET=${S3_BUCKET}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - SENTRY_DSN=${SENTRY_DSN}
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: '4G'
+    networks:
+      - justice-bid-network
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+      - elasticsearch
+
+  scheduler:
+    image: justice-bid-api:latest
+    command: celery -A tasks.celery_app beat --loglevel=info
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=${DB_URL}
+      - REDIS_URL=redis://redis:6379/0
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: '1G'
+    networks:
+      - justice-bid-network
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=justicebid
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: '4G'
+    networks:
+      - justice-bid-network
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: '2G'
+    networks:
+      - justice-bid-network
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: '2G'
+    networks:
+      - justice-bid-network
+
+  elasticsearch:
+    image: elasticsearch:8.8.1
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms2g -Xmx2g
+      - xpack.security.enabled=false
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:9200/_cluster/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: '4G'
+    networks:
+      - justice-bid-network
+
+networks:
+  justice-bid-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
+  elasticsearch_data:
+
+logging:
+  options:
+    max-size: "10m"
+    max-file: "3"
