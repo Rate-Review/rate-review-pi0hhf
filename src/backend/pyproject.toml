@@ -1,0 +1,55 @@
+[project]
+name = "justice-bid"
+version = "0.1.0"
+description = "Justice Bid Rate Negotiation System - Backend services for legal rate negotiation workflows"
+authors = ["Justice Bid <dev@justicebid.com>"]
+license = "Proprietary"
+python = ">=3.11,<3.12"
+
+[project.dependencies]
+python = ">=3.11,<3.12"
+flask = "^2.3.2"
+sqlalchemy = "^2.0.15"
+pandas = "^2.0.1"
+numpy = "^1.24.3"
+langchain = "^0.0.27"
+celery = "^5.3.0"
+flask-restful = "^0.3.10"
+alembic = "^1.10.4"
+pydantic = "^1.10.8"
+python-dotenv = "^1.0.0"
+gunicorn = "^20.1.0"
+psycopg2-binary = "^2.9.6"
+redis = "^4.5.5"
+requests = "^2.31.0"
+pyjwt = "^2.6.0"
+passlib = "^1.7.4"
+email-validator = "^2.0.0"
+marshmallow = "^3.19.0"
+openai = "^0.27.8"
+boto3 = "^1.26.162"
+
+[project.dev-dependencies]
+pytest = "^7.3.1"
+pytest-cov = "^4.1.0"
+black = "^23.3.0"
+isort = "^5.12.0"
+flake8 = "^6.0.0"
+mypy = "^1.3.0"
+faker = "^18.10.1"
+pytest-mock = "^3.10.0"
+pytest-env = "^0.8.2"
+
+[build-system]
+requires = ["poetry-core>=1.5.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+
+[tool.isort]
+profile = "black"
+
+[tool.black]
+line-length = 88
