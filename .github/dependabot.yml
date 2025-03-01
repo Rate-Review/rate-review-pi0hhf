@@ -1,0 +1,131 @@
+version: 2
+updates:
+  # npm dependencies for the frontend React application
+  - package-ecosystem: "npm"
+    directory: "/"  # Location of package.json
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "frontend"
+    # Target branch to create pull requests against
+    target-branch: "main"
+    # Assign reviewers for frontend dependency PRs
+    reviewers:
+      - "frontend-team"
+    # Group updates together
+    groups:
+      react-packages:
+        patterns:
+          - "react*"
+          - "@types/react*"
+      material-ui:
+        patterns:
+          - "@mui/*"
+      testing-packages:
+        patterns:
+          - "jest*"
+          - "@testing-library/*"
+    ignore:
+      # Ignore major version updates for these dependencies to avoid breaking changes
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major"]
+
+  # pip dependencies for the Python backend
+  - package-ecosystem: "pip"
+    directory: "/"  # Location of requirements.txt or pyproject.toml
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "backend"
+    # Target branch to create pull requests against
+    target-branch: "main"
+    # Assign reviewers for backend dependency PRs
+    reviewers:
+      - "backend-team"
+    # Group updates together
+    groups:
+      flask-packages:
+        patterns:
+          - "flask*"
+      database-packages:
+        patterns:
+          - "sqlalchemy*"
+          - "alembic*"
+      aws-packages:
+        patterns:
+          - "boto3*"
+          - "aws-*"
+    ignore:
+      # Ignore major version updates for these core dependencies
+      - dependency-name: "flask"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "sqlalchemy"
+        update-types: ["version-update:semver-major"]
+
+  # GitHub Actions workflows
+  - package-ecosystem: "github-actions"
+    directory: "/"  # Location of .github/workflows
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "ci-cd"
+    # Target branch to create pull requests against
+    target-branch: "main"
+    # Assign reviewers for CI/CD dependency PRs
+    reviewers:
+      - "devops-team"
+
+  # Terraform providers
+  - package-ecosystem: "terraform"
+    directory: "/terraform"  # Location of Terraform files
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "infrastructure"
+    # Target branch to create pull requests against
+    target-branch: "main"
+    # Assign reviewers for infrastructure dependency PRs
+    reviewers:
+      - "infrastructure-team"
+    # Group updates together
+    groups:
+      aws-providers:
+        patterns:
+          - "hashicorp/aws"
+      kubernetes-providers:
+        patterns:
+          - "hashicorp/kubernetes"
+          - "hashicorp/helm"
+
+  # Docker images
+  - package-ecosystem: "docker"
+    directory: "/"  # Location of Dockerfiles
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "docker"
+    # Target branch to create pull requests against
+    target-branch: "main"
+    # Assign reviewers for Docker dependency PRs
+    reviewers:
+      - "devops-team"
+    # Ignore major version updates for base images
+    ignore:
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "python"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "alpine"
+        update-types: ["version-update:semver-major"]
