@@ -1,0 +1,98 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: justice-bid-config
+data:
+  # Environment settings
+  environment: "production"
+  debug: "false"
+  
+  # Domain configuration
+  api_domain: "api.justicebid.com"
+  web_domain: "app.justicebid.com"
+  
+  # Database configuration
+  database_host: "justicebid-production-db.cluster-xxx.region.rds.amazonaws.com"
+  database_name: "justicebid"
+  database_port: "5432"
+  database_pool_size: "50"
+  database_pool_timeout: "30"
+  database_read_replica_host: "justicebid-production-read.cluster-xxx.region.rds.amazonaws.com"
+  
+  # Redis configuration
+  redis_host: "justicebid-production-redis.xxx.region.cache.amazonaws.com"
+  redis_port: "6379"
+  redis_ttl: "3600"
+  
+  # S3 storage configuration
+  s3_bucket: "justicebid-production-data"
+  s3_region: "us-east-1"
+  s3_documents_path: "documents/"
+  s3_exports_path: "exports/"
+  s3_imports_path: "imports/"
+  
+  # Resource limits and requests
+  resource_limits_cpu: "4"
+  resource_limits_memory: "8Gi"
+  resource_requests_cpu: "2"
+  resource_requests_memory: "4Gi"
+  
+  # Replica counts for high availability
+  replicas_frontend: "6"
+  replicas_api_gateway: "8"
+  replicas_rate_service: "8"
+  replicas_negotiation_service: "8"
+  replicas_analytics_service: "6"
+  replicas_integration_service: "6"
+  replicas_ai_service: "4"
+  replicas_document_service: "4"
+  replicas_messaging_service: "6"
+  replicas_worker: "4"
+  
+  # Logging configuration
+  log_level: "INFO"
+  log_format: "json"
+  
+  # AI configuration
+  ai_provider: "openai"
+  ai_model: "gpt-4"
+  ai_api_version: "2023-05-15"
+  ai_max_tokens: "4096"
+  
+  # Feature flags
+  enable_analytics: "true"
+  enable_file_import: "true"
+  enable_unicourt: "true"
+  enable_real_time_negotiation: "true"
+  
+  # External API endpoints
+  unicourt_api_endpoint: "https://api.unicourt.com/v1/"
+  onit_api_endpoint: "https://api.onit.com/api/v1/"
+  teamconnect_api_endpoint: "https://api.teamconnect.com/api/v3/"
+  legal_tracker_api_endpoint: "https://api.legaltracker.com/api/"
+  
+  # Security settings
+  cors_allowed_origins: "https://app.justicebid.com"
+  rate_limit_requests: "100"
+  rate_limit_period: "60"
+  session_timeout: "7200"
+  idle_timeout: "1800"
+  security_headers: "true"
+  encryption_key_version: "1"
+  tls_min_version: "TLS1.2"
+  
+  # Monitoring and tracing
+  enable_prometheus: "true"
+  enable_tracing: "true"
+  tracing_sample_rate: "0.1"
+  metrics_port: "9090"
+  health_check_interval: "30"
+  health_check_timeout: "5"
+  
+  # Performance settings
+  worker_concurrency: "25"
+  api_timeout: "30"
+  db_statement_timeout: "60"
+  max_request_body_size: "10m"
+  analytics_batch_size: "1000"
+  cache_refresh_interval: "300"
