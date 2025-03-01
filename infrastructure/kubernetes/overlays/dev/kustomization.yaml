@@ -1,0 +1,104 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+namespace: justice-bid-dev
+
+namePrefix: dev-
+
+commonLabels:
+  environment: dev
+  tier: development
+
+configMapGenerator:
+  - name: justice-bid-config
+    files:
+      - config.yaml
+
+secretGenerator:
+  - name: justice-bid-secrets
+    literals:
+      - DATABASE_USER=dev_user
+      - DATABASE_PASSWORD=dev_password
+      - JWT_SECRET=dev_jwt_secret
+      - OPENAI_API_KEY=sk-dev-key
+      - UNICOURT_API_KEY=dev-unicourt-key
+
+images:
+  - name: justicebid/frontend
+    newName: justicebid/frontend
+    newTag: dev
+  - name: justicebid/api-gateway
+    newName: justicebid/api-gateway
+    newTag: dev
+  - name: justicebid/rate-service
+    newName: justicebid/rate-service
+    newTag: dev
+  - name: justicebid/negotiation-service
+    newName: justicebid/negotiation-service
+    newTag: dev
+  - name: justicebid/analytics-service
+    newName: justicebid/analytics-service
+    newTag: dev
+  - name: justicebid/integration-service
+    newName: justicebid/integration-service
+    newTag: dev
+  - name: justicebid/ai-service
+    newName: justicebid/ai-service
+    newTag: dev
+
+patchesJson6902:
+  - target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: frontend
+    patch:
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: "200m"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: "256Mi"
+  - target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: api-gateway
+    patch:
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: "500m"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: "1Gi"
+  - target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: analytics-service
+    patch:
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: "1000m"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: "2Gi"
+
+replicas:
+  - name: frontend
+    count: 1
+  - name: api-gateway
+    count: 1
+  - name: rate-service
+    count: 1
+  - name: negotiation-service
+    count: 1
+  - name: analytics-service
+    count: 1
+  - name: integration-service
+    count: 1
+  - name: ai-service
+    count: 1
