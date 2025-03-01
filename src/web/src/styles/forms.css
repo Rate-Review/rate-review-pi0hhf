@@ -1,0 +1,428 @@
+/* Base Form Styles */
+form {
+  max-width: 100%;
+  margin-bottom: 24px;
+}
+
+.form-group {
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  margin-right: -8px;
+  margin-left: -8px;
+}
+
+.form-col {
+  padding-left: 8px;
+  padding-right: 8px;
+  flex: 1 0 0%;
+}
+
+/* Form Labels */
+.form-label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #2C5282;
+}
+
+.form-required:after {
+  content: '*';
+  color: #E53E3E;
+  margin-left: 4px;
+}
+
+/* Form Controls */
+.form-control {
+  display: block;
+  width: 100%;
+  padding: 8px 16px;
+  font-size: 16px;
+  line-height: 1.5;
+  color: #718096;
+  background-color: #FFFFFF;
+  border: 1px solid #CBD5E0;
+  border-radius: 4px;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: #3182CE;
+  box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.25);
+}
+
+.form-select {
+  display: block;
+  width: 100%;
+  padding: 8px 16px;
+  font-size: 16px;
+  line-height: 1.5;
+  color: #718096;
+  background-color: #FFFFFF;
+  border: 1px solid #CBD5E0;
+  border-radius: 4px;
+  appearance: none;
+  background-image: url('data:image/svg+xml;utf8,<svg fill="%23718096" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"></path></svg>');
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  background-size: 16px 16px;
+}
+
+.form-textarea {
+  display: block;
+  width: 100%;
+  padding: 8px 16px;
+  font-size: 16px;
+  line-height: 1.5;
+  color: #718096;
+  background-color: #FFFFFF;
+  border: 1px solid #CBD5E0;
+  border-radius: 4px;
+  resize: vertical;
+  min-height: 100px;
+}
+
+/* Checkboxes and Radios */
+.form-checkbox {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.form-checkbox-input {
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+  border: 1px solid #CBD5E0;
+  border-radius: 4px;
+  appearance: none;
+}
+
+.form-checkbox-input:checked {
+  background-color: #3182CE;
+  border-color: #3182CE;
+  background-image: url('data:image/svg+xml;utf8,<svg fill="white" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"></path></svg>');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 12px 12px;
+}
+
+.form-radio {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.form-radio-input {
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+  border: 1px solid #CBD5E0;
+  border-radius: 50%;
+  appearance: none;
+}
+
+.form-radio-input:checked {
+  border-color: #3182CE;
+  box-shadow: inset 0 0 0 4px #3182CE;
+}
+
+/* Switches for Toggle Controls */
+.form-switch {
+  display: inline-flex;
+  align-items: center;
+}
+
+.form-switch-input {
+  position: relative;
+  width: 48px;
+  height: 24px;
+  margin-right: 8px;
+  background-color: #CBD5E0;
+  border-radius: 12px;
+  transition: background-color 0.15s ease-in-out;
+  appearance: none;
+}
+
+.form-switch-input:checked {
+  background-color: #3182CE;
+}
+
+.form-switch-input:before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background-color: #FFFFFF;
+  border-radius: 50%;
+  transition: transform 0.15s ease-in-out;
+}
+
+.form-switch-input:checked:before {
+  transform: translateX(24px);
+}
+
+/* Range Inputs for Rate Adjustments */
+.form-range {
+  width: 100%;
+  height: 24px;
+  padding: 0;
+  background-color: transparent;
+  appearance: none;
+}
+
+.form-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background-color: #3182CE;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.form-range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background-color: #3182CE;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.form-range::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 4px;
+  background-color: #E2E8F0;
+  border-radius: 2px;
+}
+
+.form-range::-moz-range-track {
+  width: 100%;
+  height: 4px;
+  background-color: #E2E8F0;
+  border-radius: 2px;
+}
+
+/* File Uploads for Document Import */
+.form-file {
+  position: relative;
+  display: inline-block;
+}
+
+.form-file-input {
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.form-file-label {
+  display: inline-block;
+  padding: 8px 16px;
+  background-color: #EDF2F7;
+  border: 1px solid #CBD5E0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* Search Fields */
+.form-search {
+  position: relative;
+}
+
+.form-search .form-control {
+  padding-left: 40px;
+}
+
+.form-search:before {
+  content: '';
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  background-image: url('data:image/svg+xml;utf8,<svg fill="%23718096" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"></path></svg>');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 16px 16px;
+}
+
+/* Form Validation States */
+.form-error .form-control, 
+.form-error .form-select, 
+.form-error .form-checkbox-input, 
+.form-error .form-radio-input {
+  border-color: #E53E3E;
+}
+
+.form-error-message {
+  display: block;
+  color: #E53E3E;
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.form-success .form-control, 
+.form-success .form-select {
+  border-color: #38A169;
+}
+
+.form-success-message {
+  display: block;
+  color: #38A169;
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.form-warning .form-control, 
+.form-warning .form-select {
+  border-color: #DD6B20;
+}
+
+.form-warning-message {
+  display: block;
+  color: #DD6B20;
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.form-help {
+  display: block;
+  color: #718096;
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+/* Input States */
+.form-control[readonly], 
+.form-select[readonly], 
+.form-textarea[readonly] {
+  background-color: #F7FAFC;
+  cursor: not-allowed;
+}
+
+.form-control:disabled, 
+.form-select:disabled, 
+.form-textarea:disabled, 
+.form-checkbox-input:disabled, 
+.form-radio-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Form Layouts for Different Views */
+.form-inline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.form-inline .form-group {
+  display: flex;
+  flex: 0 0 auto;
+  flex-flow: row wrap;
+  align-items: center;
+  margin-bottom: 0;
+  margin-right: 16px;
+}
+
+.form-inline .form-label {
+  margin-bottom: 0;
+  margin-right: 8px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 16px;
+}
+
+.form-grid-span-1 { grid-column: span 1; }
+.form-grid-span-2 { grid-column: span 2; }
+.form-grid-span-3 { grid-column: span 3; }
+.form-grid-span-4 { grid-column: span 4; }
+.form-grid-span-5 { grid-column: span 5; }
+.form-grid-span-6 { grid-column: span 6; }
+.form-grid-span-7 { grid-column: span 7; }
+.form-grid-span-8 { grid-column: span 8; }
+.form-grid-span-9 { grid-column: span 9; }
+.form-grid-span-10 { grid-column: span 10; }
+.form-grid-span-11 { grid-column: span 11; }
+.form-grid-span-12 { grid-column: span 12; }
+
+/* Rate Table Form Specific Styles */
+.form-rate-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.form-rate-input {
+  width: 100px;
+  text-align: right;
+}
+
+.form-rate-change {
+  display: inline-block;
+  min-width: 60px;
+  text-align: right;
+  font-weight: 500;
+}
+
+.form-rate-increase {
+  color: #E53E3E;
+}
+
+.form-rate-decrease {
+  color: #38A169;
+}
+
+/* Responsive Behavior for Mobile */
+@media (max-width: 1199px) {
+  .form-row {
+    flex-direction: column;
+  }
+  
+  .form-col {
+    flex: 0 0 100%;
+    max-width: 100%;
+    margin-bottom: 16px;
+  }
+  
+  .form-grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  .form-inline {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .form-inline .form-group {
+    margin-right: 0;
+    margin-bottom: 16px;
+    width: 100%;
+  }
+  
+  .form-inline .form-label {
+    margin-bottom: 8px;
+    margin-right: 0;
+  }
+  
+  .form-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
