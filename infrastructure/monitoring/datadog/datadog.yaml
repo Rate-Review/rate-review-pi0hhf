@@ -1,0 +1,169 @@
+## Datadog Agent Configuration for Justice Bid Rate Negotiation System
+## This file configures comprehensive monitoring for infrastructure, applications, 
+## logs, and performance metrics
+
+# Authentication
+api_key: {{ DD_API_KEY }}
+site: "datadoghq.com"
+
+# Agent Identification
+hostname: {{ DD_HOSTNAME }}
+tags:
+  - "env:{{ ENVIRONMENT }}"
+  - "service:justice-bid"
+  - "application:rate-negotiation"
+log_level: "INFO"
+
+# APM (Application Performance Monitoring) Configuration
+apm_config:
+  enabled: true
+  apm_non_local_traffic: true
+  env: "{{ ENVIRONMENT }}"
+  # Analyzed spans configuration for critical paths
+  analyzed_spans:
+    justice-bid.rate-service|http.request: 1.0   # Full sampling for critical rate operations
+    justice-bid.negotiation-service|http.request: 1.0  # Full sampling for negotiation flows
+    justice-bid.analytics-service|http.request: 0.5  # 50% sampling for analytics
+    justice-bid.integration-service|http.request: 0.5  # 50% sampling for integrations
+    justice-bid.ai-service|http.request: 0.5  # 50% sampling for AI services
+    justice-bid.frontend|fetch: 0.1  # 10% sampling for frontend requests
+    justice-bid.*|postgresql.query: 0.2  # 20% sampling for database queries
+    justice-bid.*|redis: 0.1  # 10% sampling for cache operations
+    justice-bid.*|http.client.request: 0.5  # 50% sampling for external API calls
+
+# Logs Configuration
+logs_config:
+  logs_enabled: true
+  container_collect_all: true
+  # Processing rules
+  processing_rules:
+    # Properly handle multi-line Python tracebacks
+    - type: multi_line
+      name: python_tracebacks
+      pattern: '^\s*File .*line \d+, in'
+    # Exclude noisy health check logs
+    - type: exclude_at_match
+      name: exclude_health_checks
+      pattern: 'GET /health HTTP'
+
+# Metrics Configuration via DogStatsD
+dogstatsd_config:
+  dogstatsd_port: 8125
+  dogstatsd_non_local_traffic: true
+
+# Resource Monitoring
+process_config:
+  enabled: true
+process_collection:
+  enabled: true
+network_config:
+  enabled: true
+
+# Service Integrations
+# Kubernetes kubelet for container metrics
+kubelet:
+  enabled: true
+  url: https://kubernetes.default.svc:10250
+  tls_verify: true
+  bearer_token_path: /var/run/secrets/kubernetes.io/serviceaccount/token
+
+# PostgreSQL monitoring
+postgresql:
+  instances:
+    - host: "{{ DB_HOST }}"
+      port: "{{ DB_PORT }}"
+      username: "{{ DB_MONITOR_USER }}"
+      password: "{{ DB_MONITOR_PASSWORD }}"
+      dbname: "justicebid"
+      tags:
+        - "service:justice-bid"
+        - "db:postgres"
+      relations:
+        - postgres_relation_name: rates
+          relation_size: true
+          descriptors:
+            - [attorney_id, firm_id]
+        - postgres_relation_name: negotiations
+          relation_size: true
+          descriptors:
+            - [client_id, firm_id]
+      custom_metrics:
+        - descriptors:
+            - [query_runtime, rate_queries]
+          metrics:
+            query_runtime.avg: [gauge, avg]
+            query_runtime.count: [gauge, count]
+            query_runtime.max: [gauge, max]
+
+# Redis monitoring
+redis:
+  instances:
+    - host: "{{ REDIS_HOST }}"
+      port: "{{ REDIS_PORT }}"
+      password: "{{ REDIS_PASSWORD }}"
+      tags:
+        - "service:justice-bid-cache"
+      keys:
+        - pattern: "justice-bid:rates:*"
+          tag_by: "key"
+        - pattern: "justice-bid:negotiations:*"
+          tag_by: "key"
+
+# HTTP checks for service health
+http_check:
+  instances:
+    - name: frontend-health
+      url: "https://{{ FRONTEND_URL }}/health"
+      timeout: 5
+      method: GET
+      check_certificate_expiration: true
+      days_warning: 30
+      tags:
+        - "component:frontend"
+    - name: api-gateway-health
+      url: "https://{{ API_URL }}/health"
+      timeout: 3
+      method: GET
+      check_certificate_expiration: true
+      days_warning: 30
+      tags:
+        - "component:api-gateway"
+
+# Service Discovery
+listeners:
+  - name: docker
+    config:
+      ad_identifiers:
+        - image:.*justice-bid.*
+  - name: kubelet
+    config:
+      kubernetes_kubelet_url: https://kubernetes.default.svc:10250
+      bearer_token_authentication: true
+      bearer_token_path: /var/run/secrets/kubernetes.io/serviceaccount/token
+
+config_providers:
+  - name: docker
+    polling: true
+    poll_interval: 10
+  - name: kubelet
+    polling: true
+    poll_interval: 10
+    kubelet_configs:
+      - url: https://kubernetes.default.svc:10250
+        tls_verify: true
+        bearer_token_path: /var/run/secrets/kubernetes.io/serviceaccount/token
+
+# Kubernetes event collection
+kubernetes_event_collection:
+  collect_events: true
+  leader_election: true
+
+# Service Name Mapping for consistent identification in APM
+service_mapping:
+  rate-service: justice-bid.rate-service
+  negotiation-service: justice-bid.negotiation-service
+  analytics-service: justice-bid.analytics-service
+  integration-service: justice-bid.integration-service
+  ai-service: justice-bid.ai-service
+  messaging-service: justice-bid.messaging-service
+  frontend: justice-bid.frontend
