@@ -1,0 +1,60 @@
+.git
+.github
+.gitignore
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+.env
+.env.*
+
+# Development and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Dependency management
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Documentation
+docs/
+*.md
+LICENSE
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Docker files (no need to include these in the build)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Temporary and log files
+*.log
+logs/
+tmp/
+
+# Tests
+tests/
+test_*.py
+
+# Local development files
+.local/
+node_modules/
