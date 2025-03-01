@@ -1,0 +1,174 @@
+version: '3.8'
+
+services:
+  # Frontend service (React.js)
+  frontend:
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../../frontend:/app
+      - /app/node_modules
+    depends_on:
+      - api
+    environment:
+      - NODE_ENV=development
+      - REACT_APP_API_URL=http://localhost:5000/api
+      - REACT_APP_WS_URL=ws://localhost:5000/ws
+    networks:
+      - justicebid_network
+
+  # Backend API service (Python/Flask)
+  api:
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    volumes:
+      - ../../backend:/app
+    depends_on:
+      - postgres
+      - redis
+      - elasticsearch
+      - rabbitmq
+      - mongodb
+    environment:
+      - FLASK_ENV=development
+      - FLASK_APP=app.py
+      - FLASK_DEBUG=1
+      - DATABASE_URL=postgresql://justicebid:justicebid@postgres:5432/justicebid
+      - REDIS_URL=redis://redis:6379/0
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - MONGODB_URL=mongodb://justicebid:justicebid@mongodb:27017/justicebid
+      - SECRET_KEY=dev_secret_key
+    networks:
+      - justicebid_network
+
+  # Worker service (Celery)
+  worker:
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+    command: celery -A app.celery worker --loglevel=info
+    volumes:
+      - ../../backend:/app
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+    environment:
+      - FLASK_ENV=development
+      - DATABASE_URL=postgresql://justicebid:justicebid@postgres:5432/justicebid
+      - REDIS_URL=redis://redis:6379/0
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - SECRET_KEY=dev_secret_key
+    networks:
+      - justicebid_network
+
+  # PostgreSQL service
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=justicebid
+      - POSTGRES_USER=justicebid
+      - POSTGRES_PASSWORD=justicebid
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U justicebid"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - justicebid_network
+
+  # Redis service
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - justicebid_network
+
+  # Elasticsearch service
+  elasticsearch:
+    image: elasticsearch:8.8.0
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - xpack.security.enabled=false
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - justicebid_network
+
+  # RabbitMQ service
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"   # AMQP port
+      - "15672:15672" # Management UI port
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - justicebid_network
+
+  # MongoDB service
+  mongodb:
+    image: mongo:6-jammy
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=justicebid
+      - MONGO_INITDB_ROOT_PASSWORD=justicebid
+      - MONGO_INITDB_DATABASE=justicebid
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/justicebid --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - justicebid_network
+
+volumes:
+  postgres_data:
+  redis_data:
+  elasticsearch_data:
+  rabbitmq_data:
+  mongodb_data:
+
+networks:
+  justicebid_network:
+    driver: bridge
