@@ -1,0 +1,330 @@
+# Global server configuration
+global:
+  scrape_interval: 15s      # Set the default scrape interval to 15 seconds
+  evaluation_interval: 15s  # Evaluate rules every 15 seconds
+  scrape_timeout: 10s       # Timeout for scrape requests
+  external_labels:
+    monitor: 'justice-bid-prometheus'
+    environment: '${ENVIRONMENT}'
+
+# Load rules once and periodically evaluate them
+rule_files:
+  - "alerts.yml"
+
+# Alerting configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+      scheme: http
+      timeout: 5s
+      api_version: v2
+
+# Scrape configurations for monitoring different services
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    metrics_path: /metrics
+    honor_labels: true
+
+  # AlertManager monitoring
+  - job_name: 'alertmanager'
+    static_configs:
+      - targets: ['alertmanager:9093']
+    metrics_path: /metrics
+
+  # API Gateway monitoring
+  - job_name: 'api-gateway'
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names: ['${NAMESPACE}']
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        regex: 'api-gateway'
+        action: keep
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        regex: 'true'
+        action: keep
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        regex: '(.+)'
+        target_label: __metrics_path__
+        replacement: '$1'
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        regex: '([^:]+)(?::\d+)?;(\d+)'
+        target_label: __address__
+        replacement: '$1:$2'
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        target_label: app
+      - source_labels: [__meta_kubernetes_namespace]
+        target_label: namespace
+    metrics_path: /metrics
+    scrape_interval: 10s
+
+  # Backend API services monitoring
+  - job_name: 'backend-api'
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names: ['${NAMESPACE}']
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        regex: 'rate-service|negotiation-service|document-service|organization-service'
+        action: keep
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        regex: 'true'
+        action: keep
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        regex: '(.+)'
+        target_label: __metrics_path__
+        replacement: '$1'
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        regex: '([^:]+)(?::\d+)?;(\d+)'
+        target_label: __address__
+        replacement: '$1:$2'
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        target_label: app
+      - source_labels: [__meta_kubernetes_namespace]
+        target_label: namespace
+    metrics_path: /metrics
+    scrape_interval: 15s
+
+  # Analytics service monitoring
+  - job_name: 'analytics-service'
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names: ['${NAMESPACE}']
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        regex: 'analytics-service'
+        action: keep
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        regex: 'true'
+        action: keep
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        regex: '(.+)'
+        target_label: __metrics_path__
+        replacement: '$1'
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        regex: '([^:]+)(?::\d+)?;(\d+)'
+        target_label: __address__
+        replacement: '$1:$2'
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        target_label: app
+      - source_labels: [__meta_kubernetes_namespace]
+        target_label: namespace
+    metrics_path: /metrics
+    scrape_interval: 15s
+
+  # AI service monitoring
+  - job_name: 'ai-service'
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names: ['${NAMESPACE}']
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        regex: 'ai-service'
+        action: keep
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        regex: 'true'
+        action: keep
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        regex: '(.+)'
+        target_label: __metrics_path__
+        replacement: '$1'
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        regex: '([^:]+)(?::\d+)?;(\d+)'
+        target_label: __address__
+        replacement: '$1:$2'
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        target_label: app
+      - source_labels: [__meta_kubernetes_namespace]
+        target_label: namespace
+    metrics_path: /metrics
+    scrape_interval: 15s
+
+  # Integration service monitoring
+  - job_name: 'integration-service'
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names: ['${NAMESPACE}']
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        regex: 'integration-service'
+        action: keep
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        regex: 'true'
+        action: keep
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        regex: '(.+)'
+        target_label: __metrics_path__
+        replacement: '$1'
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        regex: '([^:]+)(?::\d+)?;(\d+)'
+        target_label: __address__
+        replacement: '$1:$2'
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        target_label: app
+      - source_labels: [__meta_kubernetes_namespace]
+        target_label: namespace
+    metrics_path: /metrics
+    scrape_interval: 15s
+
+  # Frontend monitoring
+  - job_name: 'frontend'
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names: ['${NAMESPACE}']
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        regex: 'frontend'
+        action: keep
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        regex: 'true'
+        action: keep
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        regex: '(.+)'
+        target_label: __metrics_path__
+        replacement: '$1'
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        regex: '([^:]+)(?::\d+)?;(\d+)'
+        target_label: __address__
+        replacement: '$1:$2'
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        target_label: app
+      - source_labels: [__meta_kubernetes_namespace]
+        target_label: namespace
+    metrics_path: /metrics
+    scrape_interval: 30s
+
+  # PostgreSQL monitoring
+  - job_name: 'postgresql'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+        labels:
+          service: 'database'
+          component: 'postgresql'
+    metrics_path: /metrics
+    scrape_interval: 30s
+
+  # Redis monitoring
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+        labels:
+          service: 'cache'
+          component: 'redis'
+    metrics_path: /metrics
+    scrape_interval: 30s
+
+  # MongoDB monitoring
+  - job_name: 'mongodb'
+    static_configs:
+      - targets: ['mongodb-exporter:9216']
+        labels:
+          service: 'document-storage'
+          component: 'mongodb'
+    metrics_path: /metrics
+    scrape_interval: 30s
+
+  # Elasticsearch monitoring
+  - job_name: 'elasticsearch'
+    static_configs:
+      - targets: ['elasticsearch-exporter:9114']
+        labels:
+          service: 'search'
+          component: 'elasticsearch'
+    metrics_path: /metrics
+    scrape_interval: 30s
+
+  # RabbitMQ monitoring
+  - job_name: 'rabbitmq'
+    static_configs:
+      - targets: ['rabbitmq-exporter:9419']
+        labels:
+          service: 'messaging'
+          component: 'rabbitmq'
+    metrics_path: /metrics
+    scrape_interval: 30s
+
+  # Node exporter monitoring for host metrics
+  - job_name: 'node-exporter'
+    kubernetes_sd_configs:
+      - role: node
+    scheme: https
+    tls_config:
+      ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      insecure_skip_verify: true
+    bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+    relabel_configs:
+      - action: labelmap
+        regex: __meta_kubernetes_node_label_(.+)
+      - target_label: __address__
+        replacement: kubernetes.default.svc:443
+      - source_labels: [__meta_kubernetes_node_name]
+        regex: (.+)
+        target_label: __metrics_path__
+        replacement: /api/v1/nodes/${1}/proxy/metrics/cadvisor
+    metrics_path: /metrics
+    scrape_interval: 30s
+
+  # Kubernetes state metrics
+  - job_name: 'kube-state-metrics'
+    static_configs:
+      - targets: ['kube-state-metrics:8080']
+        labels:
+          service: 'kubernetes'
+          component: 'state-metrics'
+    metrics_path: /metrics
+    scrape_interval: 30s
+
+  # UniCourt API integration monitoring
+  - job_name: 'unicourt-api'
+    metrics_path: /metrics
+    scrape_interval: 60s
+    static_configs:
+      - targets: ['integration-service:8080']
+        labels:
+          service: 'unicourt-integration'
+          component: 'external-api'
+
+  # Deep health check monitoring
+  - job_name: 'deep-health-check'
+    metrics_path: /health/deep/metrics
+    scrape_interval: 60s
+    static_configs:
+      - targets: ['api-gateway:8080']
+        labels:
+          service: 'api-gateway'
+          check_type: 'deep-health'
+
+# Storage configuration
+storage:
+  tsdb:
+    path: /prometheus
+    retention: 30d
+    retention_size: 10GB
+    wal_compression: true
+
+# Remote write configuration for long-term storage
+remote_write:
+  - url: '${REMOTE_WRITE_URL}'
+    remote_timeout: 30s
+    write_relabel_configs:
+      - source_labels: [__name__]
+        regex: '(go_.+|process_.+)'
+        action: drop
+    queue_config:
+      capacity: 10000
+      max_shards: 200
+      min_shards: 1
+      max_samples_per_send: 1000
+      batch_send_deadline: '5s'
+      min_backoff: '30ms'
+      max_backoff: '5s'
